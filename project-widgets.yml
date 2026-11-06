@@ -1,0 +1,21 @@
+include: project.yml
+name: MnemoWidgets
+targets:
+  Mnemo:
+    settings:
+      base:
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: '$(inherited) MNEMO_WIDGETS'
+        CODE_SIGN_ENTITLEMENTS: Config/Mnemo.entitlements
+    dependencies:
+      - target: MnemoWidgets
+        embed: true
+  MnemoWidgets:
+    type: app-extension
+    platform: iOS
+    sources: [Widgets, Shared]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.renalik.mnemo.widgets
+        INFOPLIST_FILE: Config/Widgets-Info.plist
+        CODE_SIGN_ENTITLEMENTS: Config/Mnemo.entitlements
+        APPLICATION_EXTENSION_API_ONLY: YES

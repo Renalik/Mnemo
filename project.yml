@@ -1,0 +1,60 @@
+name: Mnemo
+options:
+  bundleIdPrefix: app.renalik
+  deploymentTarget:
+    iOS: '26.0'
+  createIntermediateGroups: true
+  developmentLanguage: ru
+  knownRegions: [ru, en, Base]
+packages:
+  MnemoCore:
+    path: .
+  ZIPFoundation:
+    url: https://github.com/weichsel/ZIPFoundation
+    exactVersion: 0.9.19
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    TARGETED_DEVICE_FAMILY: '1'
+    IPHONEOS_DEPLOYMENT_TARGET: '26.0'
+    MARKETING_VERSION: '1.0.0'
+    CURRENT_PROJECT_VERSION: '1'
+    CODE_SIGNING_ALLOWED: NO
+targets:
+  Mnemo:
+    type: application
+    platform: iOS
+    sources: [App, Shared]
+    resources:
+      - path: Resources/Math
+        type: folder
+      - path: Resources/Assets.xcassets
+      - path: Resources/PrivacyInfo.xcprivacy
+    dependencies:
+      - package: MnemoCore
+        product: MnemoCore
+      - package: MnemoCore
+        product: CZstd
+      - package: ZIPFoundation
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.renalik.mnemo
+        INFOPLIST_FILE: Config/App-Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SUPPORTS_MACCATALYST: NO
+  MnemoUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [Tests/UITests]
+    dependencies:
+      - target: Mnemo
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  Mnemo:
+    build:
+      targets:
+        Mnemo: all
+    test:
+      targets: [MnemoUITests]

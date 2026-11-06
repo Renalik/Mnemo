@@ -1,0 +1,72 @@
+name: Build Mnemo for iPhone
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mnemo-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  core-tests:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test scheduler, import data and agent actions
+        run: swift test
+  build:
+    runs-on: macos-15
+    needs: core-tests
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [free, widgets]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode with iOS 26 SDK
+        run: |
+          python3 tools/select_xcode.py
+          xcodebuild -version
+      - name: Install project generator
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: |
+          if [ '${{ matrix.variant }}' = widgets ]; then
+            xcodegen generate --spec project-widgets.yml
+          else
+            xcodegen generate --spec project.yml
+          fi
+      - name: Build device app without Apple credentials
+        run: |
+          PROJECT=Mnemo.xcodeproj
+          if [ '${{ matrix.variant }}' = widgets ]; then PROJECT=MnemoWidgets.xcodeproj; fi
+          xcodebuild -project "$PROJECT" -scheme Mnemo -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/device CODE_SIGNING_ALLOWED=NO build
+      - name: Package IPA for on-device signing
+        run: |
+          mkdir -p build/staging/Payload
+          ditto build/device/Build/Products/Release-iphoneos/Mnemo.app build/staging/Payload/Mnemo.app
+          if [ '${{ matrix.variant }}' = widgets ]; then
+            codesign --force --sign - --entitlements Config/Mnemo.entitlements build/staging/Payload/Mnemo.app/PlugIns/MnemoWidgets.appex
+            codesign --force --sign - --entitlements Config/Mnemo.entitlements build/staging/Payload/Mnemo.app
+          fi
+          cd build/staging
+          zip -qr ../Mnemo-${{ matrix.variant }}.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mnemo-${{ matrix.variant }}
+          path: build/Mnemo-${{ matrix.variant }}.ipa
+          retention-days: 14
+      - name: Simulator smoke test and screenshots
+        if: matrix.variant == 'free'
+        run: |
+          DEVICE=$(python3 tools/select_simulator.py)
+          xcodebuild -project Mnemo.xcodeproj -scheme Mnemo -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath build/simulator -resultBundlePath build/UITests.xcresult CODE_SIGNING_ALLOWED=NO test
+      - uses: actions/upload-artifact@v4
+        if: always() && matrix.variant == 'free'
+        with:
+          name: Mnemo-UI-test-results
+          path: build/UITests.xcresult
+          retention-days: 14
