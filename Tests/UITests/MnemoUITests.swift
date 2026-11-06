@@ -9,9 +9,9 @@ final class MnemoUITests: XCTestCase {
         app.buttons["save-deck"].tap()
         app.staticTexts["Biology"].firstMatch.tap()
         app.buttons["add-card"].tap()
-        let question = app.textFields["card-question"]
+        let question = app.descendants(matching: .any).matching(identifier: "card-question").firstMatch
         XCTAssertTrue(question.waitForExistence(timeout: 5)); question.tap(); question.typeText("How many bones?")
-        let answer = app.textFields["card-answer"]; answer.tap(); answer.typeText("206")
+        let answer = app.descendants(matching: .any).matching(identifier: "card-answer").firstMatch; answer.tap(); answer.typeText("206")
         app.swipeUp()
         let save = app.buttons["save-card"]; if !save.isHittable { app.swipeUp() }; XCTAssertTrue(save.waitForExistence(timeout: 5)); save.tap()
         app.navigationBars.buttons.element(boundBy: 0).tap()

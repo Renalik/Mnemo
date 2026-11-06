@@ -101,13 +101,28 @@ enum AnkiImporter {
     }
     private static func decompress(_ source: Data, limit: Int) throws -> Data {
         try source.withUnsafeBytes { input in
-            let expected = ZSTD_getFrameContentSize(input.baseAddress, source.count)
-            guard expected != UInt64.max, expected != UInt64.max - 1, expected <= UInt64(limit) else {
-                throw MnemoError.invalid("Неверный или слишком большой файл Zstandard / Invalid or oversized Zstandard frame")
+            guard let stream = ZSTD_createDStream() else { throw MnemoError.invalid("Не хватает памяти / Out of memory") }
+            defer { ZSTD_freeDStream(stream) }
+            let initialized = ZSTD_initDStream(stream)
+            guard ZSTD_isError(initialized) == 0 else { throw MnemoError.invalid("Неверный Zstandard / Invalid Zstandard stream") }
+            var sourceBuffer = ZSTD_inBuffer(src: input.baseAddress, size: source.count, pos: 0)
+            var chunk = [UInt8](repeating: 0, count: 65536)
+            var result = Data(), remaining = 1
+            while sourceBuffer.pos < sourceBuffer.size || remaining > 0 {
+                let before = sourceBuffer.pos
+                var produced = 0
+                remaining = try chunk.withUnsafeMutableBytes { output -> Int in
+                    var destination = ZSTD_outBuffer(dst: output.baseAddress, size: output.count, pos: 0)
+                    let status = ZSTD_decompressStream(stream, &destination, &sourceBuffer)
+                    guard ZSTD_isError(status) == 0 else { throw MnemoError.invalid("Не удалось распаковать Anki / Could not decompress Anki") }
+                    produced = destination.pos
+                    return status
+                }
+                guard result.count + produced <= limit else { throw MnemoError.invalid("Превышен размер распаковки / Decompressed size limit exceeded") }
+                result.append(contentsOf: chunk.prefix(produced))
+                if remaining == 0 && sourceBuffer.pos == sourceBuffer.size { break }
+                guard produced > 0 || sourceBuffer.pos > before else { throw MnemoError.invalid("Оборванный архив Anki / Truncated Anki archive") }
             }
-            var result = Data(count: Int(expected))
-            let actual = result.withUnsafeMutableBytes { output in ZSTD_decompress(output.baseAddress, Int(expected), input.baseAddress, source.count) }
-            guard ZSTD_isError(actual) == 0, actual == Int(expected) else { throw MnemoError.invalid("Не удалось распаковать Anki / Could not decompress Anki") }
             return result
         }
     }
