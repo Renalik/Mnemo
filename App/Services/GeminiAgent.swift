@@ -37,7 +37,7 @@ actor GeminiHTTP {
         config.timeoutIntervalForRequest = 90
         config.timeoutIntervalForResource = 180
         config.urlCache = nil
-        session = URLSession(configuration: config)
+        session = URLSession(configuration: config, delegate: AIRequestDelegate(), delegateQueue: nil)
     }
     private func send(_ path: String, key: String, body: JSONValue? = nil) async throws -> JSONValue {
         guard !key.isEmpty else { throw MnemoError.invalid("Сначала сохраните API-ключ в настройках / Save your API key in Settings first") }
@@ -142,7 +142,7 @@ actor GeminiHTTP {
         do {
             guard !settings.aiModel.isEmpty else { throw MnemoError.invalid(store.t("Выберите модель ИИ в настройках", "Choose an AI model in Settings")) }
             attachmentParts = try attachments.map { try $0.part(for: settings.aiProvider) }
-            _ = try Keychain.read(settings: settings)
+            guard try !Keychain.read(settings: settings).isEmpty else { throw MnemoError.invalid(store.t("Сохраните API-ключ выбранного сервиса в настройках", "Save the selected service API key in Settings")) }
         } catch { self.error = error.localizedDescription; return }
         if activeConfiguration != configuration { clearConversation(); activeConfiguration = configuration; activeModel = settings.aiModel }
         messages.append(ChatMessage(user: true, text: text, attachmentNames: attachments.map(\.name)))

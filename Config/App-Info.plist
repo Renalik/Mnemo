@@ -15,7 +15,7 @@
 <key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>
 <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string></array>
 <key>NSFaceIDUsageDescription</key><string>Открывайте ваши карточки с помощью Face ID.</string>
-<key>NSMicrophoneUsageDescription</key><string>Диктуйте запросы Gemini и записывайте озвучку карточек.</string>
+<key>NSMicrophoneUsageDescription</key><string>Диктуйте запросы помощнику ИИ и записывайте озвучку карточек.</string>
 <key>NSSpeechRecognitionUsageDescription</key><string>Преобразование диктовки в текст запроса.</string>
 <key>NSSupportsLiveActivities</key><true/>
 <key>CFBundleURLTypes</key><array><dict><key>CFBundleURLSchemes</key><array><string>mnemo</string></array></dict></array>

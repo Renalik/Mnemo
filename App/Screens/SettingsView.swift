@@ -142,7 +142,7 @@ struct AISettingsView: View {
                     VStack(alignment: .leading, spacing: 18) {
                         Label(hasKey ? store.t("Ключ сохранён", "Key is saved") : store.t("Добавьте API-ключ", "Add an API key"), systemImage: hasKey ? "lock.shield" : "key").font(.headline)
                         SecureField(store.t("API-ключ выбранного сервиса", "Selected service API key"), text: $key).textContentType(.password).textInputAutocapitalization(.never).autocorrectionDisabled().accessibilityIdentifier("ai-key")
-                        Button(store.t("Сохранить и проверить", "Save and check")) {
+                        Button(store.t("Сохранить ключ", "Save key")) {
                             store.perform { try Keychain.save(key, settings: store.settings); key = ""; hasKey = true; reload() }
                         }.buttonStyle(.glassProminent).disabled(key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || loading || agent.busy || !configuredEndpoint)
                     }
@@ -157,7 +157,7 @@ struct AISettingsView: View {
                             Picker(store.t("Доступные модели", "Available models"), selection: store.aiModelBinding) {
                                 if !agent.models.contains(where: { $0.id == store.settings.aiModel }) { Text(store.settings.aiModel).tag(store.settings.aiModel) }
                                 ForEach(agent.models) { model in Text(model.displayName ?? model.id).tag(model.id) }
-                            }.onChange(of: store.settings.aiModel) { _, value in modelID = value; agent.clearConversation() }
+                            }.disabled(loading || agent.busy || !configuredEndpoint).onChange(of: store.settings.aiModel) { _, value in modelID = value; agent.clearConversation() }
                         }
                         TextField(store.t("ID модели", "Model ID"), text: $modelID).textInputAutocapitalization(.never).autocorrectionDisabled().accessibilityIdentifier("ai-model-id")
                         Button(store.t("Использовать эту модель", "Use this model")) {
