@@ -83,7 +83,7 @@ struct RootView: View {
                 case 3: SettingsView()
                 default: TodayView()
                 }
-            }.background(.clear).toolbarBackground(.hidden, for: .navigationBar)
+            }.background { AmbientBackground() }.toolbarBackground(.hidden, for: .navigationBar)
         }.id(store.selectedTab).background(.clear)
             .safeAreaInset(edge: .bottom, spacing: 0) { GlassNavigation().padding(.horizontal, 16).padding(.bottom, 8).padding(.top, 8) }
             .sheet(isPresented: $store.showAgent, onDismiss: { store.openPendingAgentReview() }) { AgentView().presentationDragIndicator(.visible).presentationBackground(.clear) }
@@ -129,11 +129,10 @@ struct GlassNavigation: View {
                     let width = (geometry.size.width - 8) / 4
                     let x = finger ?? (4 + width * (CGFloat(store.selectedTab) + 0.5))
                     ZStack(alignment: .leading) {
-                        Capsule().fill(.clear).glassEffect(.regular, in: .capsule)
                         Capsule().fill(Color(hex: store.theme.accent).opacity(0.08))
                             .frame(width: width, height: finger == nil ? 56 : 62)
-                            .glassEffect(.regular.tint(Color(hex: store.theme.accent).opacity(0.12)).interactive(), in: .capsule)
-                            .glassEffectID("lens", in: namespace)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .overlay(Capsule().stroke(.white.opacity(0.18), lineWidth: 0.6))
                             .offset(x: x - width / 2)
                             .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.74), value: x)
                         HStack(spacing: 0) {
@@ -148,7 +147,7 @@ struct GlassNavigation: View {
                                     .accessibilityLabel(labels[index]).accessibilityAddTraits(index == store.selectedTab ? .isSelected : [])
                             }
                         }.padding(.horizontal, 4)
-                    }.frame(height: 66)
+                    }.frame(height: 66).glassEffect(.regular.interactive(), in: .capsule)
                         .simultaneousGesture(DragGesture(minimumDistance: 5).onChanged { value in
                             finger = min(geometry.size.width - width / 2 - 4, max(width / 2 + 4, value.location.x))
                             let next = min(3, max(0, Int((value.location.x - 4) / width)))
@@ -166,7 +165,7 @@ struct GlassNavigation: View {
     }
     private func select(_ index: Int) {
         guard store.selectedTab != index else { return }
-        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { store.selectedTab = index }
+        store.selectedTab = index
         Haptics.tap(store.settings.haptics)
     }
 }

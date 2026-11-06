@@ -145,7 +145,7 @@ struct GeminiSettingsView: View {
                 }
                 if let error = agent.error { Text(error).font(.footnote).foregroundStyle(.red) }
             }.padding(20)
-        }.navigationBarTitleDisplayMode(.inline).onAppear { hasKey = (try? Keychain.read().isEmpty == false) ?? false }
+        }.background { AmbientBackground() }.navigationBarTitleDisplayMode(.inline).onAppear { hasKey = (try? Keychain.read().isEmpty == false) ?? false }
     }
     private func reload() {
         loading = true; agent.clearConversation(); agent.error = nil

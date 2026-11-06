@@ -72,7 +72,7 @@ struct ScheduleView: View {
                     }
                 }
             }.padding(20)
-        }.navigationBarTitleDisplayMode(.inline)
+        }.background { AmbientBackground() }.navigationBarTitleDisplayMode(.inline)
     }
     private func enable(_ enabled: Bool) {
         if !enabled { store.perform { try store.commit { $0.settings.notifications = false } }; return }

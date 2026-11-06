@@ -13,7 +13,7 @@ struct AppearanceView: View {
                 SectionTitle(title: store.t("Анимация главной", "Home animation"))
                 AnimationPicker()
             }.padding(20)
-        }.navigationBarTitleDisplayMode(.inline)
+        }.background { AmbientBackground() }.navigationBarTitleDisplayMode(.inline)
     }
 }
 

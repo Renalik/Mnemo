@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 
 final class MnemoUITests: XCTestCase {
     func testCreateDeckCardAndReview() {
@@ -29,6 +30,27 @@ final class MnemoUITests: XCTestCase {
         app.buttons["open-agent"].tap(); screenshot("gemini")
     }
     private func screenshot(_ name: String) {
-        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+        let screenshot = XCUIScreen.main.screenshot()
+        let attachment = XCTAttachment(screenshot: screenshot); attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+        assertVisibleContent(screenshot.image, screen: name)
+    }
+    /// Check actual rendered pixels, not only accessibility elements that may
+    /// remain present while an incorrectly animated screen is transparent.
+    private func assertVisibleContent(_ image: UIImage, screen: String) {
+        let width = 240, height = 520
+        var bytes = [UInt8](repeating: 0, count: width * height * 4)
+        bytes.withUnsafeMutableBytes { buffer in
+            let bitmap = CGBitmapInfo.byteOrder32Big.rawValue | CGImageAlphaInfo.premultipliedLast.rawValue
+            guard let cg = image.cgImage, let context = CGContext(data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: bitmap) else { XCTFail("Could not inspect screenshot"); return }
+            context.draw(cg, in: CGRect(x: 0, y: 0, width: width, height: height))
+        }
+        var bright = 0
+        for y in (height * 15 / 100)..<(height * 85 / 100) {
+            for x in 8..<(width - 8) {
+                let i = (y * width + x) * 4
+                if bytes[i] > 190 && bytes[i + 1] > 190 && bytes[i + 2] > 190 { bright += 1 }
+            }
+        }
+        XCTAssertGreaterThan(bright, 100, "Screen \(screen) has no readable foreground content")
     }
 }

@@ -119,7 +119,7 @@ struct DeckDetailView: View {
                     }
                 }.padding(20)
             }
-        }.scrollIndicators(.hidden).navigationBarTitleDisplayMode(.inline)
+        }.scrollIndicators(.hidden).background { AmbientBackground() }.navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { IconButton(symbol: "slider.horizontal.3", label: store.t("Настройки колоды", "Deck options")) { editDeck = true } } }
             .sheet(isPresented: $create) { CardEditor(deckID: deckID) }
             .sheet(item: $editCard) { card in CardEditor(deckID: deckID, existing: card) }
