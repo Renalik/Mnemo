@@ -52,6 +52,18 @@ actor AIHTTP {
         let models = entries.compactMap { item -> GeminiModel? in
             guard let id = item["id"].string, !id.isEmpty else { return nil }
             if let params = item["supported_parameters"].array, !params.contains(.string("tools")) { return nil }
+            let lower = id.lowercased()
+            if [.kimi, .qwen, .glm, .minimax, .stepfun].contains(settings.aiProvider) {
+                guard !["embed", "rerank", "tts", "audio", "speech", "voice", "video", "music", "image", "step1x"].contains(where: lower.contains) else { return nil }
+                switch settings.aiProvider {
+                case .kimi: guard lower.hasPrefix("kimi") || lower.hasPrefix("moonshot") else { return nil }
+                case .qwen: guard lower.hasPrefix("qwen") || lower.hasPrefix("qwq") else { return nil }
+                case .glm: guard lower.hasPrefix("glm") else { return nil }
+                case .minimax: guard lower.hasPrefix("minimax") else { return nil }
+                case .stepfun: guard lower.hasPrefix("step") else { return nil }
+                default: break
+                }
+            }
             if settings.aiProvider == .openai {
                 guard id.hasPrefix("gpt-"), !["audio", "realtime", "transcribe", "tts", "image", "search", "codex"].contains(where: id.contains) || id.hasPrefix("chatgpt-") || id.range(of: "^o[0-9]", options: .regularExpression) != nil else { return nil }
             }
