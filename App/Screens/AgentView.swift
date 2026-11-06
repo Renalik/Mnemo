@@ -3,7 +3,7 @@ import PhotosUI
 import UniformTypeIdentifiers
 import MnemoCore
 
-struct AgentView: View {
+@MainActor struct AgentView: View {
     @Environment(AppStore.self) private var store
     @Environment(GeminiAgent.self) private var agent
     @Environment(\.dismiss) private var dismiss
@@ -87,6 +87,9 @@ struct AgentView: View {
             }
         }.onChange(of: voice.transcript) { _, text in input = beforeDictation + (beforeDictation.isEmpty ? "" : " ") + text }
             .onChange(of: voice.error) { _, error in if let error { store.error = error; voice.error = nil } }
+            .onChange(of: agent.busy) { _, busy in
+                if !busy && store.pendingAgentReview != nil { dismiss() }
+            }
             .onDisappear { voice.stopAll() }
     }
     private var introduction: some View {

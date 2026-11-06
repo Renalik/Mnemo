@@ -16,6 +16,7 @@ struct CardEditor: View {
     @State private var formula = ""
     @State private var imageName: String?
     @State private var audioName: String?
+    @State private var savedRecordingPath: String?
     @State private var theme = 88
     @State private var useCustomTheme = false
     @State private var flipped = false
@@ -137,7 +138,7 @@ struct CardEditor: View {
                     } catch { store.error = error.localizedDescription }
                 }
             }
-            .onChange(of: voice.recording) { wasRecording, recording in if wasRecording && !recording && audioName == nil { finishRecording() } }
+            .onChange(of: voice.recording) { wasRecording, recording in if wasRecording && !recording { finishRecording() } }
             .onChange(of: voice.error) { _, error in if let error { store.error = error; voice.error = nil } }
             .onAppear {
                 if let card = existing { question = card.question; answer = card.answer; example = card.example; formula = card.formula; imageName = card.image; audioName = card.audio; theme = card.themeID ?? deck?.themeID ?? 88; useCustomTheme = card.themeID != nil }
@@ -159,7 +160,11 @@ struct CardEditor: View {
         }
     }
     private func finishRecording() {
-        store.perform { if let url = voice.stopRecording() { audioName = try store.saveMedia(Data(contentsOf: url), extension: "m4a") } }
+        store.perform {
+            if let url = voice.stopRecording(), savedRecordingPath != url.path {
+                audioName = try store.saveMedia(Data(contentsOf: url), extension: "m4a"); savedRecordingPath = url.path
+            }
+        }
     }
     private func improve() {
         improving = true

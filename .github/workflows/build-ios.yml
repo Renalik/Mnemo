@@ -2,6 +2,7 @@ name: Build Mnemo for iPhone
 on:
   push:
     branches: [main]
+    paths-ignore: ['**/*.md', 'docs/**', 'checks/**', 'examples/**', 'tools/github_build.py']
   workflow_dispatch:
 permissions:
   contents: read
@@ -54,6 +55,11 @@ jobs:
           fi
           cd build/staging
           zip -qr ../Mnemo-${{ matrix.variant }}.ipa Payload
+      - name: Verify IPA contents
+        run: |
+          FLAGS=''
+          if [ '${{ matrix.variant }}' = widgets ]; then FLAGS='--widgets'; fi
+          python3 tools/verify_ipa.py build/Mnemo-${{ matrix.variant }}.ipa $FLAGS
       - uses: actions/upload-artifact@v4
         with:
           name: Mnemo-${{ matrix.variant }}

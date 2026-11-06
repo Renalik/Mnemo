@@ -219,8 +219,10 @@ actor GeminiHTTP {
                             "retention": .number(store.settings.retention), "theme": .string(store.settings.themeID), "language": .string(store.lang.rawValue),
                             "reminders": .array(store.settings.reminders.map { .object(["hour": .number(Double($0.hour)), "minute": .number(Double($0.minute))]) })])
         case "start_review":
-            store.startReview(weak: args["weak"].bool ?? false)
-            return .object(["status": .string(store.reviewRequest == nil ? "no_cards_due" : "opened")])
+            let weak = args["weak"].bool ?? false
+            guard !Scheduler.queue(store.library, weakOnly: weak).isEmpty else { return .object(["status": .string("no_cards_due")]) }
+            store.pendingAgentReview = weak
+            return .object(["status": .string("review_will_open_after_this_reply")])
         default: throw MnemoError.invalid("Неизвестная команда / Unknown tool")
         }
     }

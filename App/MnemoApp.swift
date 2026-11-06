@@ -80,8 +80,8 @@ struct RootView: View {
             }.background(.clear).toolbarBackground(.hidden, for: .navigationBar)
                 .safeAreaInset(edge: .bottom, spacing: 0) { GlassNavigation().padding(.horizontal, 16).padding(.bottom, 8).padding(.top, 8) }
         }.background(.clear)
-            .sheet(isPresented: $store.showAgent) { AgentView().presentationDragIndicator(.visible).presentationBackground(.clear) }
-            .fullScreenCover(item: $store.reviewRequest) { request in ReviewView(request: request) }
+            .sheet(isPresented: $store.showAgent, onDismiss: { store.openPendingAgentReview() }) { AgentView().presentationDragIndicator(.visible).presentationBackground(.clear) }
+            .fullScreenCover(item: $store.reviewRequest) { request in ReviewView(request: request).id(request.id) }
     }
 }
 

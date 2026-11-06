@@ -13,6 +13,7 @@ import WidgetKit
     var selectedTab = 0
     var systemDark = true
     var showAgent = false
+    var pendingAgentReview: Bool?
     var reviewRequest: ReviewRequest?
     let directory: URL
     let mediaDirectory: URL
@@ -81,6 +82,11 @@ import WidgetKit
         guard !queue.isEmpty else { notice = t("Сейчас нет карточек для повторения", "No cards are due right now"); return }
         reviewRequest = ReviewRequest(items: queue, practice: weak)
         Haptics.tap(settings.haptics)
+    }
+    func openPendingAgentReview() {
+        guard let weak = pendingAgentReview else { return }
+        pendingAgentReview = nil
+        startReview(weak: weak)
     }
     @discardableResult func rate(_ item: ReviewItem, grade: Grade, session: UUID, seconds: Double, practice: Bool) throws -> AnswerEvent {
         guard let card = card(item.cardID), let deck = deck(card.deckID) else { throw MnemoError.invalid(t("Карточка не найдена", "Card not found")) }

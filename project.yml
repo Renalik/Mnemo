@@ -24,10 +24,12 @@ targets:
   Mnemo:
     type: application
     platform: iOS
-    sources: [App, Shared]
-    resources:
+    sources:
+      - path: App
+      - path: Shared
       - path: Resources/Math
         type: folder
+        buildPhase: resources
       - path: Resources/Assets.xcassets
       - path: Resources/PrivacyInfo.xcprivacy
     dependencies:
@@ -51,10 +53,23 @@ targets:
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
+  MnemoIntegrationTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/IntegrationTests
+      - path: Tests/Fixtures
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - target: Mnemo
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
 schemes:
   Mnemo:
     build:
       targets:
         Mnemo: all
     test:
-      targets: [MnemoUITests]
+      targets: [MnemoIntegrationTests, MnemoUITests]

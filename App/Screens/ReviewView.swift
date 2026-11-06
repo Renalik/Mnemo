@@ -28,7 +28,7 @@ struct ReviewView: View {
             AmbientBackground()
             if finished { summary } else { session }
         }.foregroundStyle(Color(hex: store.theme.text))
-            .sheet(isPresented: $explaining) { AgentView().presentationBackground(.clear) }
+            .sheet(isPresented: $explaining, onDismiss: { store.openPendingAgentReview() }) { AgentView().presentationBackground(.clear) }
             .onAppear { activity.start(total: request.items.count, language: store.lang, enabled: store.settings.liveActivity) }
             .onDisappear { voice.stopAll(); activity.end() }
             .onChange(of: voice.error) { _, error in if let error { store.error = error; voice.error = nil } }
