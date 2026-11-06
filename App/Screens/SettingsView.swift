@@ -94,7 +94,7 @@ struct SettingsView: View {
                         } label: { SettingRow(symbol: "tablecells", title: store.t("Экспорт карточек CSV", "Export cards as CSV")) { Image(systemName: "square.and.arrow.up") } }.buttonStyle(.plain)
                     }
                 }
-                Text("Mnemo 1.2 · iOS 26+").accessibilityIdentifier("settings-footer").font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity)
+                Text("Mnemo 1.3 · iOS 26+").accessibilityIdentifier("settings-footer").font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity)
             }.padding(20)
         }.mainMenuClearance().sheet(isPresented: $themePicker) { CardThemePicker(selected: store.setting(\.defaultCardThemeID)) }
             .sheet(item: $exported) { ShareSheet(items: [$0.url]) }

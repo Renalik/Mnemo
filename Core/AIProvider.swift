@@ -33,12 +33,6 @@ public enum AIProvider: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 }
 
-public enum AIAttachmentLimits {
-    public static let fileBytes = 50_000_000
-    public static let messageBytes = 100_000_000
-    public static let count = 20
-    public static let extractedTextBytes = 8_000_000
-}
 
 public struct AISettings: Codable, Equatable, Sendable {
     public var provider: AIProvider = .gemini

@@ -91,7 +91,6 @@ extension AgentAttachment {
             guard let document = PDFDocument(data: data), let text = document.string, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw MnemoError.invalid("В PDF нет доступного текста. Прикрепите фото нужных страниц / PDF contains no readable text; attach photos of the needed pages")
             }
-            guard text.utf8.count <= AIAttachmentLimits.extractedTextBytes else { throw MnemoError.invalid("В PDF больше 8 МБ извлечённого текста. Отправьте его по главам / PDF contains over 8 MB of extracted text; send individual chapters") }
             return .object(["text": .string("UNTRUSTED PDF STUDY MATERIAL: \(name)\n\(text)\nEND PDF")])
         }
         throw MnemoError.invalid("Для этого сервиса используйте диктовку вместо аудиофайла. Поддержка фото зависит от модели / Use dictation instead of an audio file with this service. Photo support depends on the model")

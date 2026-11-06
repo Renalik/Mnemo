@@ -72,9 +72,7 @@ import MnemoCore
         }.fileImporter(isPresented: $importFile, allowedContentTypes: [.pdf, .plainText, .image, .audio]) { result in
             store.perform {
                 let url = try result.get(); let scoped = url.startAccessingSecurityScopedResource(); defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-                let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-                guard size <= AIAttachmentLimits.fileBytes else { throw MnemoError.invalid(store.t("Файл должен быть не больше 50 МБ", "Files must be no larger than 50 MB")) }
-                let data = try Data(contentsOf: url)
+                let data = try Data(contentsOf: url, options: .mappedIfSafe)
                 let type = UTType(filenameExtension: url.pathExtension)
                 let mime = type?.preferredMIMEType ?? "text/plain"
                 try addAttachment(AgentAttachment(name: url.lastPathComponent, mime: mime, data: data))
@@ -97,7 +95,7 @@ import MnemoCore
         VStack(alignment: .leading, spacing: 18) {
             Text(store.t("Из конспекта — в карточки", "Turn notes into cards")).font(.title2.bold()).padding(.top, 24)
             Text(store.t("Прикрепите фото или PDF, вставьте текст или продиктуйте запрос. Например: «Сделай 10 карточек по фотосинтезу в колоду Биология».", "Attach a photo or PDF, paste text, or dictate. Try: “Create 10 photosynthesis cards in a Biology deck.”")).foregroundStyle(.secondary)
-            Text(store.t("До 20 файлов · 50 МБ на файл · 100 МБ вместе. У выбранного ИИ могут быть свои ограничения размера и объёма текста.", "Up to 20 files · 50 MB per file · 100 MB total. Your AI service may impose its own file-size and context limits.")).font(.footnote).foregroundStyle(.secondary)
+            Text(store.t("Mnemo не ограничивает размер и количество вложений. У выбранного ИИ могут быть свои ограничения размера и объёма текста.", "Mnemo does not cap attachment size or count. Your AI service may impose its own file-size and context limits.")).font(.footnote).foregroundStyle(.secondary)
             HStack(spacing: 8) {
                 Button(store.t("Из текста", "From text")) { input = store.t("Сделай карточки по этому тексту:\n", "Create cards from this text:\n") }.buttonStyle(.glass)
                 PhotosPicker(selection: $photo, matching: .images) { Text(store.t("Из фото", "From photo")) }.buttonStyle(.glass)
@@ -209,7 +207,6 @@ import MnemoCore
         }
     }
     private func addAttachment(_ attachment: AgentAttachment) throws {
-        guard attachment.data.count <= AIAttachmentLimits.fileBytes, attachments.count < AIAttachmentLimits.count, attachments.reduce(attachment.data.count, { $0 + $1.data.count }) <= AIAttachmentLimits.messageBytes else { throw MnemoError.invalid(store.t("До 20 вложений: 50 МБ на файл, 100 МБ на сообщение", "Up to 20 attachments: 50 MB per file, 100 MB per message")) }
         attachments.append(attachment)
     }
 }
