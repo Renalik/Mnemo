@@ -65,7 +65,13 @@ struct RootView: View {
                 if url.scheme == "mnemo" && url.host == "review" && !store.locked { store.startReview() }
             }
             .onChange(of: scheme) { _, scheme in store.systemDark = scheme == .dark }
-            .task { store.systemDark = scheme == .dark; store.visit() }
+            .task {
+                store.systemDark = scheme == .dark; store.visit()
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(30))
+                    if phase == .active { store.now = Date() }
+                }
+            }
     }
     private var mainContent: some View {
         @Bindable var store = store
@@ -78,8 +84,8 @@ struct RootView: View {
                 default: TodayView()
                 }
             }.background(.clear).toolbarBackground(.hidden, for: .navigationBar)
-                .safeAreaInset(edge: .bottom, spacing: 0) { GlassNavigation().padding(.horizontal, 16).padding(.bottom, 8).padding(.top, 8) }
-        }.background(.clear)
+        }.id(store.selectedTab).background(.clear)
+            .safeAreaInset(edge: .bottom, spacing: 0) { GlassNavigation().padding(.horizontal, 16).padding(.bottom, 8).padding(.top, 8) }
             .sheet(isPresented: $store.showAgent, onDismiss: { store.openPendingAgentReview() }) { AgentView().presentationDragIndicator(.visible).presentationBackground(.clear) }
             .fullScreenCover(item: $store.reviewRequest) { request in ReviewView(request: request).id(request.id) }
     }

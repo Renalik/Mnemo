@@ -14,7 +14,6 @@ final class MnemoUITests: XCTestCase {
         let answer = app.descendants(matching: .any).matching(identifier: "card-answer").firstMatch; answer.tap(); answer.typeText("206")
         app.swipeUp()
         let save = app.buttons["save-card"]; if !save.isHittable { app.swipeUp() }; XCTAssertTrue(save.waitForExistence(timeout: 5)); save.tap()
-        app.navigationBars.buttons.element(boundBy: 0).tap()
         app.buttons["tab-0"].tap()
         app.buttons["start-review"].tap()
         XCTAssertTrue(app.buttons["show-answer"].waitForExistence(timeout: 5)); app.buttons["show-answer"].tap()

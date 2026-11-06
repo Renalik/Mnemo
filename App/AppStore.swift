@@ -12,6 +12,7 @@ import WidgetKit
     var loadFailed = false
     var selectedTab = 0
     var systemDark = true
+    var now = Date()
     var showAgent = false
     var pendingAgentReview: Bool?
     var reviewRequest: ReviewRequest?
@@ -26,8 +27,8 @@ import WidgetKit
         return .find(pairs.first(where: { $0.value == selected.id })?.key ?? "orange")
     }
     var settings: Settings { library.settings }
-    var statistics: Statistics { Statistics(library) }
-    var due: [ReviewItem] { Scheduler.queue(library) }
+    var statistics: Statistics { Statistics(library, now: now) }
+    var due: [ReviewItem] { Scheduler.queue(library, now: now) }
     private let file: URL
     private var lastVisit: Date?
 
@@ -61,6 +62,7 @@ import WidgetKit
         let data = try JSONEncoder().encode(next)
         try data.write(to: file, options: [.atomic, .completeFileProtection])
         library = next
+        now = Date()
         Task { await NotificationService.shared.refresh(next) }
         publishWidget()
     }
