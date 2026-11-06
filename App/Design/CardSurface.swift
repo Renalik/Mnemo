@@ -90,7 +90,9 @@ struct CardSurface: View {
                 for i in 0..<30 {
                     let angle = Double(i) * Double.pi * 2 / 30
                     var p = Path(); p.move(to: CGPoint(x: 0, y: size.height))
-                    p.addLine(to: CGPoint(x: cos(angle) * size.height * 3, y: size.height + sin(angle) * size.height * 3))
+                    let rayX: CGFloat = CGFloat(cos(angle)) * size.height * 3
+                    let rayY: CGFloat = size.height + CGFloat(sin(angle)) * size.height * 3
+                    p.addLine(to: CGPoint(x: rayX, y: rayY))
                     context.stroke(p, with: .color(ink), lineWidth: step * 0.4)
                 }
             default:
@@ -108,7 +110,9 @@ struct CardSurface: View {
                 for index in 0..<14 {
                     var p = Path()
                     for x in stride(from: CGFloat(0), through: size.width, by: 3) {
-                        let y = CGFloat(index) * size.height / 12 + sin(x / (theme.variant == 0 ? 25 : 80) + Double(index)) * (theme.variant == 0 ? 15 : 50)
+                        let phase = Double(x) / (theme.variant == 0 ? 25.0 : 80.0) + Double(index)
+                        let displacement = CGFloat(sin(phase) * (theme.variant == 0 ? 15.0 : 50.0))
+                        let y = CGFloat(index) * size.height / 12 + displacement
                         if x == 0 { p.move(to: CGPoint(x: x, y: y)) } else { p.addLine(to: CGPoint(x: x, y: y)) }
                     }
                     context.stroke(p, with: .color(ink), lineWidth: CGFloat(index % 3 + 1) * 3)

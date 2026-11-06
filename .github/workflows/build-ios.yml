@@ -70,3 +70,15 @@ jobs:
           name: Mnemo-UI-test-results
           path: build/UITests.xcresult
           retention-days: 14
+      - name: Export simulator screenshots
+        if: always() && matrix.variant == 'free'
+        run: |
+          if [ -d build/UITests.xcresult ]; then
+            xcrun xcresulttool export attachments --path build/UITests.xcresult --output-path build/screenshots
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always() && matrix.variant == 'free'
+        with:
+          name: Mnemo-Screenshots
+          path: build/screenshots
+          retention-days: 14

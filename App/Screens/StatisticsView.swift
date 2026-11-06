@@ -57,7 +57,7 @@ struct StatisticsView: View {
             VStack(alignment: .leading, spacing: 18) {
                 SectionTitle(title: store.t("Активность по часам", "Activity by hour"))
                 Chart {
-                    ForEach(0..<24) { hour in
+                    ForEach(0..<24, id: \.self) { hour in
                         let count = events.filter { Calendar.current.component(.hour, from: $0.date) == hour }.count
                         BarMark(x: .value("Hour", hour), y: .value("Answers", count)).foregroundStyle(Color(hex: store.theme.accent)).cornerRadius(4)
                     }

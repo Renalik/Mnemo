@@ -74,6 +74,7 @@ public struct Palette: Sendable {
 
 public struct CardTheme: Identifiable, Sendable {
     public let id: Int
+    public init(id: Int) { self.id = min(149, max(0, id)) }
     public var palette: Palette { Palette.all[id % 25] }
     public var category: Int { id / 25 }
     public var variant: Int { id % 5 }

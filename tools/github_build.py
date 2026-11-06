@@ -12,6 +12,9 @@ import urllib.parse
 import urllib.request
 import zipfile
 import io
+import sys
+
+sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 BASE = 'https://api.github.com/repos/Renalik/Mnemo'
