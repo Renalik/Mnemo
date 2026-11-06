@@ -40,8 +40,9 @@ public extension Settings {
     }
     mutating func selectModel(_ value: String) {
         if ai == nil { selectProvider(.gemini) }
-        ai?.models[aiProvider.rawValue] = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        if aiProvider == .gemini { model = value.trimmingCharacters(in: .whitespacesAndNewlines) }
+        let provider = aiProvider
+        ai?.models[provider.rawValue] = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if provider == .gemini { model = value.trimmingCharacters(in: .whitespacesAndNewlines) }
     }
     mutating func setCustomBaseURL(_ value: String) throws {
         let normalized = try AIEndpoint.normalized(value)
