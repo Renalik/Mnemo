@@ -34,8 +34,8 @@ actor GeminiHTTP {
     private let session: URLSession
     init() {
         let config = URLSessionConfiguration.ephemeral
-        config.timeoutIntervalForRequest = 90
-        config.timeoutIntervalForResource = 180
+        config.timeoutIntervalForRequest = 180
+        config.timeoutIntervalForResource = 300
         config.urlCache = nil
         session = URLSession(configuration: config, delegate: AIRequestDelegate(), delegateQueue: nil)
     }
@@ -44,7 +44,7 @@ actor GeminiHTTP {
         guard let url = URL(string: base + path), url.host == "generativelanguage.googleapis.com" else { throw MnemoError.invalid("Неверный адрес Google / Invalid Google URL") }
         var request = URLRequest(url: url)
         request.setValue(key, forHTTPHeaderField: "x-goog-api-key")
-        if let body { request.httpMethod = "POST"; request.setValue("application/json", forHTTPHeaderField: "Content-Type"); request.httpBody = try body.data() }
+        if let body { request.httpMethod = "POST"; request.setValue("application/json", forHTTPHeaderField: "Content-Type"); request.httpBody = try body.data(); guard (request.httpBody?.count ?? 0) <= 100_000_000 else { throw MnemoError.invalid("Запрос Gemini после кодирования превышает 100 МБ. Отправьте файлы по отдельности / Encoded Gemini request exceeds 100 MB; send files separately") } }
         let (data, response) = try await session.data(for: request)
         try Task.checkCancellation()
         guard let http = response as? HTTPURLResponse else { throw MnemoError.invalid("Нет ответа от Google / No response from Google") }
@@ -54,6 +54,7 @@ actor GeminiHTTP {
             switch http.statusCode {
             case 400: message = "Google отклонил запрос: проверьте модель и вложения / Google rejected the request; check model and attachments"
             case 401, 403: message = "Нет доступа: проверьте ключ, регион и VPN / Access denied; check key, region and VPN"
+            case 413: message = "Google ограничил размер запроса. Отправьте файлы по отдельности / Google rejected the request size; send files separately"
             case 404: message = "Модель недоступна. Обновите список моделей / Model unavailable; refresh the model list"
             case 429: message = "Достигнут лимит Google. Повторите позже / Google rate limit reached; try again later"
             default: message = "Ошибка Google \(http.statusCode). Повторите позже / Google error; try again later"
@@ -134,7 +135,7 @@ actor GeminiHTTP {
     func configurationChanged() { clearConversation(); models = []; error = nil; activeConfiguration = "" }
     func send(_ text: String, attachments: [AgentAttachment] = [], store: AppStore) {
         guard !busy, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !attachments.isEmpty else { return }
-        guard attachments.reduce(text.utf8.count, { $0 + $1.data.count }) <= 12_000_000 else { error = store.t("Вложения вместе должны быть меньше 12 МБ", "Total attachments must be under 12 MB"); return }
+        guard attachments.count <= AIAttachmentLimits.count, attachments.allSatisfy({ $0.data.count <= AIAttachmentLimits.fileBytes }), attachments.reduce(text.utf8.count, { $0 + $1.data.count }) <= AIAttachmentLimits.messageBytes else { error = store.t("До 20 файлов: 50 МБ на файл, 100 МБ на сообщение", "Up to 20 files: 50 MB per file, 100 MB per message"); return }
         guard pending.isEmpty else { error = store.t("Сначала примените или отклоните предложенные изменения", "Apply or dismiss the proposed changes first"); return }
         let settings = store.settings
         let configuration = settings.aiProvider.rawValue + "|" + settings.aiBaseURL + "|" + settings.aiModel

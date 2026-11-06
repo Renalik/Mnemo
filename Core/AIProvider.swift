@@ -1,12 +1,17 @@
 import Foundation
 
 public enum AIProvider: String, Codable, CaseIterable, Identifiable, Sendable {
-    case gemini, deepseek, openai, openrouter, custom
+    case gemini, deepseek, kimi, qwen, glm, minimax, stepfun, openai, openrouter, custom
     public var id: String { rawValue }
     public func title(_ language: Language) -> String {
         switch self {
         case .gemini: return "Gemini"
         case .deepseek: return "DeepSeek"
+        case .kimi: return "Kimi · Moonshot"
+        case .qwen: return "Qwen · Alibaba Cloud"
+        case .glm: return "GLM · Z.ai"
+        case .minimax: return "MiniMax"
+        case .stepfun: return "StepFun"
         case .openai: return "OpenAI"
         case .openrouter: return "OpenRouter"
         case .custom: return language.text("Другой сервис", "Other service")
@@ -16,11 +21,23 @@ public enum AIProvider: String, Codable, CaseIterable, Identifiable, Sendable {
         switch self {
         case .gemini: return "https://generativelanguage.googleapis.com/v1beta"
         case .deepseek: return "https://api.deepseek.com/v1"
+        case .kimi: return "https://api.moonshot.ai/v1"
+        case .qwen: return "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+        case .glm: return "https://api.z.ai/api/paas/v4"
+        case .minimax: return "https://api.minimax.io/v1"
+        case .stepfun: return "https://api.stepfun.ai/v1"
         case .openai: return "https://api.openai.com/v1"
         case .openrouter: return "https://openrouter.ai/api/v1"
         case .custom: return ""
         }
     }
+}
+
+public enum AIAttachmentLimits {
+    public static let fileBytes = 50_000_000
+    public static let messageBytes = 100_000_000
+    public static let count = 20
+    public static let extractedTextBytes = 8_000_000
 }
 
 public struct AISettings: Codable, Equatable, Sendable {

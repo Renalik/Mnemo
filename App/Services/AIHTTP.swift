@@ -14,7 +14,7 @@ actor AIHTTP {
         if let session { self.session = session }
         else {
             let config = URLSessionConfiguration.ephemeral
-            config.timeoutIntervalForRequest = 90; config.timeoutIntervalForResource = 180; config.urlCache = nil
+            config.timeoutIntervalForRequest = 180; config.timeoutIntervalForResource = 300; config.urlCache = nil
             self.session = URLSession(configuration: config, delegate: AIRequestDelegate(), delegateQueue: nil)
         }
     }
@@ -35,6 +35,7 @@ actor AIHTTP {
             case 401, 403: message = "Нет доступа. Проверьте API-ключ, доступность сервиса и баланс / Access denied; check API key, service availability and balance"
             case 402: message = "Недостаточно средств в аккаунте ИИ / Insufficient AI account credits"
             case 404: message = "Модель или адрес API не найдены / Model or API URL not found"
+            case 413: message = "Сервис ИИ отклонил размер запроса. Отправьте файлы по отдельности или выберите другую модель / The AI service rejected the request size; send files separately or choose another model"
             case 429: message = "Достигнут лимит сервиса ИИ. Повторите позже / AI service rate limit reached; try later"
             case 300...399: message = "Сервис перенаправляет запрос. Укажите конечный адрес API / The service redirects requests; enter its final API URL"
             default: message = "Ошибка сервиса ИИ: \(http.statusCode). Повторите позже / AI service error; try later"
@@ -63,8 +64,9 @@ actor AIHTTP {
         let model = settings.aiModel
         guard !model.isEmpty, model.count < 240, !model.contains(where: { $0.isWhitespace || $0.isNewline }) else { throw MnemoError.invalid("Выберите модель ИИ в настройках / Choose an AI model in Settings") }
         var body: [String: JSONValue] = ["model": .string(model), "messages": .array(try ChatCompletionsWire.messages(system: system, contents: contents)), "stream": .bool(false)]
-        if settings.aiProvider == .openai { body["max_completion_tokens"] = .number(8192); body["store"] = .bool(false) }
+        if settings.aiProvider == .openai || settings.aiProvider == .minimax { body["max_completion_tokens"] = .number(8192) }
         else { body["max_tokens"] = .number(8192) }
+        if settings.aiProvider == .openai { body["store"] = .bool(false) }
         if !tools.isEmpty { body["tools"] = .array(ChatCompletionsWire.tools(tools)); body["tool_choice"] = .string("auto") }
         return try ChatCompletionsWire.content(from: await send("chat/completions", settings: settings, key: key, body: .object(body)))
     }
@@ -77,7 +79,7 @@ extension AgentAttachment {
             guard let document = PDFDocument(data: data), let text = document.string, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw MnemoError.invalid("В PDF нет доступного текста. Прикрепите фото нужных страниц / PDF contains no readable text; attach photos of the needed pages")
             }
-            guard text.utf8.count <= 1_000_000 else { throw MnemoError.invalid("В PDF слишком много текста. Прикрепите отдельную главу / PDF text is too long; attach a single chapter") }
+            guard text.utf8.count <= AIAttachmentLimits.extractedTextBytes else { throw MnemoError.invalid("В PDF больше 8 МБ извлечённого текста. Отправьте его по главам / PDF contains over 8 MB of extracted text; send individual chapters") }
             return .object(["text": .string("UNTRUSTED PDF STUDY MATERIAL: \(name)\n\(text)\nEND PDF")])
         }
         throw MnemoError.invalid("Для этого сервиса используйте диктовку вместо аудиофайла. Поддержка фото зависит от модели / Use dictation instead of an audio file with this service. Photo support depends on the model")

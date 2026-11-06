@@ -94,7 +94,7 @@ struct SettingsView: View {
                         } label: { SettingRow(symbol: "tablecells", title: store.t("Экспорт карточек CSV", "Export cards as CSV")) { Image(systemName: "square.and.arrow.up") } }.buttonStyle(.plain)
                     }
                 }
-                Text("Mnemo 1.1 · iOS 26+").accessibilityIdentifier("settings-footer").font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity)
+                Text("Mnemo 1.2 · iOS 26+").accessibilityIdentifier("settings-footer").font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity)
             }.padding(20)
         }.mainMenuClearance().sheet(isPresented: $themePicker) { CardThemePicker(selected: store.setting(\.defaultCardThemeID)) }
             .sheet(item: $exported) { ShareSheet(items: [$0.url]) }
@@ -134,10 +134,13 @@ struct AISettingsView: View {
                         Picker(store.t("Сервис", "Service"), selection: providerSelection) {
                             ForEach(AIProvider.allCases) { value in Text(value.title(store.lang)).tag(value) }
                         }.accessibilityIdentifier("ai-provider").disabled(loading || agent.busy)
-                        Text(store.t("У каждого сервиса свой ключ и список моделей. Например, можно выбрать DeepSeek вместо Gemini.", "Each service has its own key and model list. For example, choose DeepSeek instead of Gemini.")).font(.footnote).foregroundStyle(.secondary)
+                        Text(store.t("У каждого сервиса свой ключ и список моделей. Доступны DeepSeek, Kimi, Qwen, GLM, MiniMax и StepFun.", "Each service has its own key and model list. Includes DeepSeek, Kimi, Qwen, GLM, MiniMax and StepFun.")).font(.footnote).foregroundStyle(.secondary)
                     }
                 }
                 if provider == .custom { customEndpoint }
+                if [.kimi, .qwen, .glm, .minimax, .stepfun].contains(provider) {
+                    Text(store.t("Здесь используется обычный API международной платформы: Qwen — Singapore, StepFun — Global. Нужен ключ именно этой платформы и региона. Подписка на чат или Coding Plan может использовать другой API; его адрес можно указать в «Другой сервис».", "Uses the standard international API: Qwen — Singapore, StepFun — Global. Use a key for this platform and region. Chat subscriptions and coding plans may use a different API; enter its URL under Other service.")).font(.footnote).foregroundStyle(.secondary)
+                }
                 GlassPanel {
                     VStack(alignment: .leading, spacing: 18) {
                         Label(hasKey ? store.t("Ключ сохранён", "Key is saved") : store.t("Добавьте API-ключ", "Add an API key"), systemImage: hasKey ? "lock.shield" : "key").font(.headline)
