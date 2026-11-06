@@ -12,10 +12,14 @@ enum Haptics {
 }
 
 enum Keychain {
-    private static let service = "app.renalik.mnemo.gemini"
-    static func read() throws -> String {
-        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
-                                    kSecAttrAccount as String: "personal-key", kSecReturnData as String: true, kSecMatchLimit as String: kSecMatchLimitOne]
+    private static func service(_ settings: Settings) -> String { "app.renalik.mnemo." + settings.aiProvider.rawValue }
+    private static func account(_ settings: Settings) -> String {
+        guard settings.aiProvider == .custom else { return "personal-key" }
+        return "endpoint-" + Data(settings.aiBaseURL.utf8).base64EncodedString()
+    }
+    static func read(settings: Settings = Settings()) throws -> String {
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service(settings),
+                                    kSecAttrAccount as String: account(settings), kSecReturnData as String: true, kSecMatchLimit as String: kSecMatchLimitOne]
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound { return "" }
@@ -24,10 +28,10 @@ enum Keychain {
         }
         return key
     }
-    static func save(_ key: String) throws {
+    static func save(_ key: String, settings: Settings = Settings()) throws {
         let clean = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !clean.isEmpty, clean.count < 500 else { throw MnemoError.invalid("Введите API-ключ / Enter an API key") }
-        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: "personal-key"]
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service(settings), kSecAttrAccount as String: account(settings)]
         let attrs: [String: Any] = [kSecValueData as String: Data(clean.utf8), kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly]
         let status = SecItemUpdate(query as CFDictionary, attrs as CFDictionary)
         if status == errSecItemNotFound {

@@ -68,11 +68,11 @@ struct ScheduleView: View {
                 GlassPanel {
                     VStack(alignment: .leading, spacing: 12) {
                         Label("FSRS-6", systemImage: "scope").font(.headline)
-                        Text(store.t("Алгоритм выбирает интервал по вашей оценке, истории ответов и цели запоминания. Gemini помогает с содержанием карточек, а дни повторения рассчитывает приложение.", "The scheduler uses your rating, review history, and retention target. Gemini helps with card content; the app calculates review intervals.")).font(.subheadline).foregroundStyle(.secondary)
+                        Text(store.t("Алгоритм выбирает интервал по вашей оценке, истории ответов и цели запоминания. ИИ помогает с содержанием карточек, а дни повторения рассчитывает приложение.", "The scheduler uses your rating, review history, and retention target. AI helps with card content; the app calculates review intervals.")).font(.subheadline).foregroundStyle(.secondary)
                     }
                 }
             }.padding(20)
-        }.background { AmbientBackground() }.navigationBarTitleDisplayMode(.inline)
+        }.mainMenuClearance().background { AmbientBackground() }.navigationBarTitleDisplayMode(.inline)
     }
     private func enable(_ enabled: Bool) {
         if !enabled { store.perform { try store.commit { $0.settings.notifications = false } }; return }

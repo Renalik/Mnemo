@@ -13,6 +13,13 @@ enum Space {
     static let medium: CGFloat = 16
     static let large: CGFloat = 24
     static let section: CGFloat = 32
+    static let menuScrollClearance: CGFloat = 96
+}
+
+extension View {
+    func mainMenuClearance() -> some View {
+        contentMargins(.bottom, Space.menuScrollClearance, for: .scrollContent)
+    }
 }
 
 struct AmbientBackground: View {

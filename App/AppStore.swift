@@ -118,6 +118,12 @@ import WidgetKit
             else { library.cards.append(card) }
         }
     }
+    func deleteDeck(_ id: UUID) throws {
+        try commit { try $0.deleteDeck(id) }
+    }
+    var aiModelBinding: Binding<String> {
+        Binding(get: { self.settings.aiModel }, set: { value in self.perform { try self.commit { $0.settings.selectModel(value) } } })
+    }
     func saveDeck(_ deck: Deck) throws {
         try commit { library in
             if let index = library.decks.firstIndex(where: { $0.id == deck.id }) { library.decks[index] = deck }

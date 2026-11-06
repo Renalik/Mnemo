@@ -34,11 +34,11 @@ struct DecksView: View {
                 }
                 LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 12) {
                     ForEach(decks) { deck in
-                        NavigationLink { DeckDetailView(deckID: deck.id) } label: { DeckTile(deck: deck) }.buttonStyle(PressStyle())
+                        NavigationLink { DeckDetailView(deckID: deck.id) } label: { DeckTile(deck: deck) }.buttonStyle(PressStyle()).accessibilityIdentifier(deck.id == decks.last?.id ? "decks-last-block" : "deck-tile-" + deck.id.uuidString)
                     }
                 }
             }.padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 24)
-        }.scrollIndicators(.hidden).sheet(isPresented: $create) { DeckEditor() }
+        }.mainMenuClearance().scrollIndicators(.hidden).sheet(isPresented: $create) { DeckEditor() }
     }
 }
 
@@ -65,6 +65,7 @@ struct DeckTile: View {
 
 struct DeckDetailView: View {
     @Environment(AppStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
     let deckID: UUID
     @State private var filter = 0
     @State private var create = false
@@ -92,10 +93,10 @@ struct DeckDetailView: View {
                     HStack(spacing: 10) {
                         PrimaryButton(title: store.t("Повторить", "Review"), symbol: "play.fill") { store.startReview(deckID: deckID) }
                         IconButton(symbol: "plus", label: store.t("Добавить карточку", "Add card")) { create = true }.accessibilityIdentifier("add-card")
-                        IconButton(symbol: "sparkles", label: "Gemini") { store.showAgent = true }
+                        IconButton(symbol: "sparkles", label: store.t("Помощник", "Assistant")) { store.showAgent = true }
                     }
                     Segments(selected: $filter, labels: [store.t("Все", "All"), store.t("Слабые", "Weak"), store.t("Новые", "New"), store.t("Выучены", "Learned")])
-                    if cards.isEmpty { EmptyMessage(symbol: "rectangle.badge.plus", title: store.t("Добавьте карточки", "Add your cards"), detail: store.t("Напишите вопрос и ответ или попросите Gemini разобрать конспект.", "Write a question and answer or ask Gemini to turn notes into cards.")) }
+                    if cards.isEmpty { EmptyMessage(symbol: "rectangle.badge.plus", title: store.t("Добавьте карточки", "Add your cards"), detail: store.t("Напишите вопрос и ответ или попросите ИИ разобрать конспект.", "Write a question and answer or ask AI to turn notes into cards.")) }
                     GlassPanel(padding: 16) {
                         LazyVStack(alignment: .leading, spacing: 0) {
                             ForEach(cards) { card in
@@ -119,11 +120,16 @@ struct DeckDetailView: View {
                     }
                 }.padding(20)
             }
-        }.scrollIndicators(.hidden).background { AmbientBackground() }.navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { IconButton(symbol: "slider.horizontal.3", label: store.t("Настройки колоды", "Deck options")) { editDeck = true } } }
+        }.mainMenuClearance().scrollIndicators(.hidden).background { AmbientBackground() }.navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    IconButton(symbol: "slider.horizontal.3", label: store.t("Настройки колоды", "Deck options")) { editDeck = true }.accessibilityIdentifier("deck-options")
+                }.sharedBackgroundVisibility(.hidden)
+            }
             .sheet(isPresented: $create) { CardEditor(deckID: deckID) }
             .sheet(item: $editCard) { card in CardEditor(deckID: deckID, existing: card) }
             .sheet(isPresented: $editDeck) { if let deck { DeckEditor(existing: deck) } }
+            .onChange(of: deck == nil) { _, missing in if missing { dismiss() } }
     }
 }
 
@@ -138,6 +144,7 @@ struct DeckEditor: View {
     @State private var chooseTheme = false
     @State private var ownWeekdays = false
     @State private var weekdays = Array(1...7)
+    @State private var confirmDelete = false
     var body: some View {
         NavigationStack {
             ZStack {
@@ -157,7 +164,7 @@ struct DeckEditor: View {
                                 Text(store.t("Ответ станет вопросом. У обратной стороны своё расписание.", "The answer becomes the question. Reverse cards have their own schedule.")).font(.footnote).foregroundStyle(.secondary)
                                 Divider()
                                 Toggle(store.t("Вводить ответ", "Type the answer"), isOn: $typed)
-                                Text(store.t("Gemini проверит смысл, если вы включите проверку и подключите ключ. Итоговую оценку выбираете вы.", "Gemini checks meaning when answer checking is enabled and a key is connected. You choose the final rating.")).font(.footnote).foregroundStyle(.secondary)
+                                Text(store.t("ИИ проверит смысл, если вы включите проверку и подключите ключ. Итоговую оценку выбираете вы.", "AI checks meaning when answer checking is enabled and a key is connected. You choose the final rating.")).font(.footnote).foregroundStyle(.secondary)
                             }
                         }
                         GlassPanel {
@@ -167,11 +174,26 @@ struct DeckEditor: View {
                             }
                         }
                         PrimaryButton(title: store.t("Сохранить колоду", "Save deck"), symbol: "checkmark") { save() }.disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || ownWeekdays && weekdays.isEmpty).accessibilityIdentifier("save-deck")
+                        if existing != nil {
+                            Button(role: .destructive) { confirmDelete = true } label: {
+                                Label(store.t("Удалить колоду", "Delete deck"), systemImage: "trash").frame(maxWidth: .infinity, minHeight: 48)
+                            }.buttonStyle(.glass).accessibilityIdentifier("delete-deck")
+                        }
                     }.padding(20)
                 }
             }.navigationTitle(existing == nil ? store.t("Новая колода", "New deck") : store.t("Колода", "Deck")).navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .topBarLeading) { Button(store.t("Отмена", "Cancel")) { dismiss() } } }
         }.sheet(isPresented: $chooseTheme) { CardThemePicker(selected: $theme) }
+            .alert(store.t("Удалить колоду?", "Delete this deck?"), isPresented: $confirmDelete) {
+                Button(store.t("Отмена", "Cancel"), role: .cancel) { }
+                Button(store.t("Удалить", "Delete"), role: .destructive) {
+                    if let existing { store.perform { try store.deleteDeck(existing.id); dismiss() } }
+                }
+            } message: {
+                if let existing {
+                    Text(store.t("Колода «\(existing.name)», карточки (\(store.cards(existing.id).count)) и их история повторений будут удалены. Отменить это действие нельзя.", "“\(existing.name)”, its \(store.cards(existing.id).count) cards and their review history will be deleted. This cannot be undone."))
+                }
+            }
             .onAppear { if let deck = existing { name = deck.name; reverse = deck.reverse; typed = deck.typedAnswer; theme = deck.themeID; ownWeekdays = deck.weekdays != nil; weekdays = deck.weekdays ?? Array(1...7) } else { theme = store.settings.defaultCardThemeID } }
     }
     private func save() {

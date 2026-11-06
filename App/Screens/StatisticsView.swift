@@ -45,12 +45,12 @@ struct StatisticsView: View {
                         }
                         Divider()
                         Text(store.t("«Выучено» — карточки на повторении с устойчивостью памяти от 21 дня. «Вспомнили» — все оценки, кроме «Не помню». Это самооценка, а не результат экзамена.", "Learned means review cards with memory stability of at least 21 days. Recall rate includes every rating except Again. These are self-assessments, not exam scores.")).font(.footnote).foregroundStyle(.secondary)
-                        Text(store.t("Уверенные ответы: ", "Confident answers: ") + percentage(store.statistics.confidence(events))).font(.subheadline)
+                        Text(store.t("Уверенные ответы: ", "Confident answers: ") + percentage(store.statistics.confidence(events))).font(.subheadline).accessibilityIdentifier("statistics-last-block")
                         if !events.isEmpty { Text(store.t("В среднем на ответ: \(Int(events.reduce(0) { $0 + $1.seconds } / Double(events.count))) с", "Average answer time: \(Int(events.reduce(0) { $0 + $1.seconds } / Double(events.count))) s")).font(.subheadline) }
                     }
                 }
             }.padding(20)
-        }.scrollIndicators(.hidden).sheet(item: Binding(get: { exportURL.map(ShareFile.init) }, set: { exportURL = $0?.url })) { ShareSheet(items: [$0.url]) }
+        }.mainMenuClearance().scrollIndicators(.hidden).sheet(item: Binding(get: { exportURL.map(ShareFile.init) }, set: { exportURL = $0?.url })) { ShareSheet(items: [$0.url]) }
     }
     private var hourlyChart: some View {
         GlassPanel {

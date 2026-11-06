@@ -54,7 +54,7 @@ struct TodayView: View {
                     Metric(value: "\(reviewed.count)", label: store.t("ответов", "answers"))
                     Metric(value: store.statistics.accuracy(reviewed)?.formatted(.percent.precision(.fractionLength(0))) ?? "—", label: store.t("вспомнили", "recall rate"))
                     Metric(value: "\(Int(reviewed.reduce(0) { $0 + $1.seconds } / 60)) " + store.t("мин", "min"), label: store.t("в обучении", "studying"))
-                    Metric(value: "\(store.statistics.streak)", label: store.t("дней подряд", "day streak"), detail: store.t("Рекорд: \(store.statistics.record)", "Best: \(store.statistics.record)"))
+                    Metric(value: "\(store.statistics.streak)", label: store.t("дней подряд", "day streak"), detail: store.t("Рекорд: \(store.statistics.record)", "Best: \(store.statistics.record)")).accessibilityIdentifier("today-last-block")
                 }
                 if !reviewed.isEmpty {
                     SectionTitle(title: store.t("Уже повторено", "Already reviewed"))
@@ -76,7 +76,7 @@ struct TodayView: View {
                 }
                 weakCards
             }.padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 24)
-        }.scrollIndicators(.hidden).sheet(isPresented: $createDeck) { DeckEditor() }
+        }.mainMenuClearance().scrollIndicators(.hidden).sheet(isPresented: $createDeck) { DeckEditor() }
     }
     private var header: some View {
         HStack(alignment: .bottom) {

@@ -87,18 +87,25 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 20) {
             Image(systemName: "sparkles").font(.system(size: 48)).foregroundStyle(Color(hex: store.theme.accent)).padding(.top, 30)
             Text(store.t("Помощник по карточкам", "Your card assistant")).font(.largeTitle.bold())
-            Text(store.t("Gemini создаёт карточки из текста, фото и PDF, улучшает вопросы и объясняет ответы. Изменения сначала покажет вам.", "Gemini creates cards from text, photos, and PDFs, improves questions, and explains answers. It previews changes before saving.")).foregroundStyle(.secondary)
+            Text(store.t("ИИ создаёт карточки из текста, фото и PDF, улучшает вопросы и объясняет ответы. Изменения сначала покажет вам.", "AI creates cards from text, photos, and PDFs, improves questions, and explains answers. It previews changes before saving.")).foregroundStyle(.secondary)
             GlassPanel {
-                SecureField(store.t("API-ключ Gemini — необязательно", "Gemini API key — optional"), text: $key).textContentType(.password).autocorrectionDisabled().textInputAutocapitalization(.never)
+                VStack(spacing: 16) {
+                    Picker(store.t("Сервис ИИ", "AI service"), selection: Binding(get: { store.settings.aiProvider }, set: { value in
+                        store.perform { try store.commit { $0.settings.selectProvider(value) }; key = ""; agent.configurationChanged() }
+                    })) {
+                        ForEach(AIProvider.allCases.filter { $0 != .custom }) { provider in Text(provider.title(store.lang)).tag(provider) }
+                    }
+                    SecureField(store.t("API-ключ — необязательно", "API key — optional"), text: $key).textContentType(.password).autocorrectionDisabled().textInputAutocapitalization(.never)
+                }
             }
-            Text(store.t("Ключ сохранится в Связке ключей. Запросы и выбранные вложения отправляются Google только при использовании помощника. Без ключа карточки и повторение работают офлайн.", "Your key stays in Keychain. Prompts and selected attachments go to Google only when you use the assistant. Cards and reviews work offline without a key.")).font(.footnote).foregroundStyle(.secondary)
-            Text(store.t("Модель выберете из доступных вашему ключу в настройках. API Gemini может расходовать квоту или средства вашего аккаунта.", "Choose a model available to your key in Settings. Gemini API requests may consume your account quota or credits.")).font(.footnote).foregroundStyle(.secondary)
+            Text(store.t("Ключ сохранится в Связке ключей. Запросы и выбранные вложения отправляются выбранному сервису ИИ только при использовании помощника. Без ключа карточки и повторение работают офлайн.", "Your key stays in Keychain. Prompts and selected attachments go to your selected AI service only when you use the assistant. Cards and reviews work offline without a key.")).font(.footnote).foregroundStyle(.secondary)
+            Text(store.t("Модель выберете из доступных вашему ключу в настройках. API сервиса может расходовать квоту или средства вашего аккаунта.", "Choose a model available to your key in Settings. AI API requests may consume your account quota or credits.")).font(.footnote).foregroundStyle(.secondary)
         }
     }
     private func next() {
         if step < 4 { withAnimation(.easeInOut(duration: 0.2)) { step += 1 }; return }
         store.perform {
-            if !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { try Keychain.save(key); key = ""; Task { await agent.loadModels(store: store) } }
+            if !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { try Keychain.save(key, settings: store.settings); key = ""; Task { await agent.loadModels(store: store) } }
             try store.commit { $0.settings.onboardingComplete = true }
         }
     }

@@ -24,7 +24,7 @@ struct ImportView: View {
                     GlassPanel {
                         VStack(alignment: .leading, spacing: 16) {
                             Text(store.t("В копии: \(backup.library.decks.count) колод, \(backup.library.cards.count) карточек", "Backup: \(backup.library.decks.count) decks, \(backup.library.cards.count) cards")).font(.headline)
-                            Text(store.t("Добавим отсутствующие карточки и историю. Ваши текущие карточки и настройки сохранятся. Ключ Gemini нужно ввести отдельно.", "Missing cards and history will be added. Current cards and settings stay in place. Enter the Gemini key separately.")).font(.subheadline).foregroundStyle(.secondary)
+                            Text(store.t("Добавим отсутствующие карточки и историю. Ваши текущие карточки и настройки сохранятся. Ключ ИИ нужно ввести отдельно.", "Missing cards and history will be added. Current cards and settings stay in place. Enter the AI key separately.")).font(.subheadline).foregroundStyle(.secondary)
                             PrimaryButton(title: store.t("Добавить из копии", "Merge backup")) {
                                 store.perform { try store.restore(backup); self.backup = nil; store.notice = store.t("Копия добавлена", "Backup merged") }
                             }
@@ -64,7 +64,7 @@ struct ImportView: View {
                     }
                 }
             }.padding(20)
-        }.navigationBarTitleDisplayMode(.inline)
+        }.mainMenuClearance().navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .bottom) {
                 if !imported.isEmpty { PrimaryButton(title: store.t("Добавить \(selected.count) карточек", "Import \(selected.count) cards")) { save() }.disabled(selected.isEmpty || busy).padding(20) }
             }

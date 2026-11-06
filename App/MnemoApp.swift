@@ -85,7 +85,7 @@ struct RootView: View {
                 }
             }.background { AmbientBackground() }.toolbarBackground(.hidden, for: .navigationBar)
         }.id(store.selectedTab).background(.clear)
-            .safeAreaInset(edge: .bottom, spacing: 0) { GlassNavigation().padding(.horizontal, 16).padding(.bottom, 8).padding(.top, 8) }
+            .safeAreaInset(edge: .bottom, spacing: 0) { GlassNavigation().frame(height: 66).padding(.horizontal, 16).padding(.bottom, 8).padding(.top, 8) }
             .sheet(isPresented: $store.showAgent, onDismiss: { store.openPendingAgentReview() }) { AgentView().presentationDragIndicator(.visible).presentationBackground(.clear) }
             .fullScreenCover(item: $store.reviewRequest) { request in ReviewView(request: request).id(request.id) }
     }
@@ -159,7 +159,7 @@ struct GlassNavigation: View {
                 Button { store.showAgent = true } label: {
                     Image(systemName: "sparkles").font(.system(size: 25)).frame(width: 58, height: 66)
                 }.buttonStyle(.plain).glassEffect(.regular.tint(Color(hex: store.theme.accent).opacity(0.2)).interactive(), in: .capsule)
-                    .accessibilityLabel(store.t("Открыть Gemini", "Open Gemini")).accessibilityIdentifier("open-agent")
+                    .accessibilityLabel(store.t("Открыть помощника", "Open assistant")).accessibilityIdentifier("open-agent")
             }
         }
     }

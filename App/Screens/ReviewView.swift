@@ -65,7 +65,7 @@ struct ReviewView: View {
                                     Text(store.t("Ваш ответ", "Your answer")).font(.caption).foregroundStyle(.secondary)
                                     Text(typed)
                                     if store.settings.checkAnswers {
-                                        Button { checkAnswer(question: question, expected: answer) } label: { Label(store.t("Проверить с Gemini", "Check with Gemini"), systemImage: "sparkles") }.buttonStyle(.glass).disabled(checking)
+                                        Button { checkAnswer(question: question, expected: answer) } label: { Label(store.t("Проверить с ИИ", "Check with AI"), systemImage: "sparkles") }.buttonStyle(.glass).disabled(checking)
                                     }
                                     if checking { ProgressView() }
                                     if !check.isEmpty { Text(check).font(.subheadline) }

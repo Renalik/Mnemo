@@ -2,6 +2,51 @@ import XCTest
 import UIKit
 
 final class MnemoUITests: XCTestCase {
+    func testLastBlocksCanScrollAboveBottomMenu() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-testing", "--demo"]; app.launch()
+        XCTAssertTrue(app.buttons["tab-0"].waitForExistence(timeout: 15))
+        for (tab, identifier) in [(0, "today-last-block"), (1, "decks-last-block"), (2, "statistics-last-block"), (3, "settings-footer")] {
+            app.buttons["tab-\(tab)"].tap()
+            let last = app.descendants(matching: .any).matching(identifier: identifier).firstMatch
+            for _ in 0..<6 {
+                if last.exists && last.frame.height > 0 && last.frame.maxY < app.buttons["tab-0"].frame.minY - 12 && last.frame.minY > 80 { break }
+                app.scrollViews.firstMatch.swipeUp()
+            }
+            XCTAssertTrue(last.exists, identifier)
+            XCTAssertGreaterThan(last.frame.height, 0, identifier)
+            XCTAssertLessThan(last.frame.maxY, app.buttons["tab-0"].frame.minY - 12, identifier + " is covered by the menu")
+            screenshot("scroll-bottom-\(tab)")
+        }
+    }
+    func testDeleteDeckRequiresConfirmationAndKeepsOtherDecks() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-testing", "--demo"]; app.launch()
+        XCTAssertTrue(app.buttons["tab-1"].waitForExistence(timeout: 15)); app.buttons["tab-1"].tap()
+        app.staticTexts["Английский B2"].firstMatch.tap()
+        let options = app.buttons["deck-options"]; XCTAssertTrue(options.waitForExistence(timeout: 5)); XCTAssertTrue(options.isHittable)
+        screenshot("deck-options")
+        options.tap()
+        let delete = app.buttons["delete-deck"]
+        for _ in 0..<4 { if delete.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(delete.isHittable); delete.tap()
+        XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout: 3)); app.alerts.buttons["Отмена"].tap()
+        XCTAssertTrue(delete.exists); delete.tap(); app.alerts.buttons["Удалить"].tap()
+        XCTAssertTrue(app.buttons["create-deck"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Английский B2"].exists); XCTAssertTrue(app.staticTexts["Анатомия"].exists)
+    }
+    func testAIProviderSettingsAndManualModel() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-testing"]; app.launch()
+        XCTAssertTrue(app.buttons["tab-3"].waitForExistence(timeout: 15)); app.buttons["tab-3"].tap()
+        app.buttons["ai-settings"].tap()
+        let provider = app.buttons["ai-provider"]; XCTAssertTrue(provider.waitForExistence(timeout: 5)); provider.tap()
+        app.buttons["DeepSeek"].tap()
+        let model = app.textFields["ai-model-id"]
+        for _ in 0..<4 { if model.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(model.isHittable); model.tap(); model.typeText("manual-test-model")
+        let save = app.buttons["Использовать эту модель"]
+        if !save.isHittable { app.swipeUp() }; save.tap()
+        XCTAssertFalse(app.alerts.firstMatch.exists)
+        app.swipeDown(); screenshot("ai-settings-deepseek")
+    }
     func testCreateDeckCardAndReview() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-testing"]; app.launch()
         XCTAssertTrue(app.buttons["tab-1"].waitForExistence(timeout: 15)); app.buttons["tab-1"].tap()

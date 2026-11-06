@@ -21,17 +21,17 @@ struct SettingsView: View {
                         Spacer(minLength: 0)
                     }
                 }
-                SectionTitle(title: "Gemini")
+                SectionTitle(title: store.t("Искусственный интеллект", "Artificial intelligence"))
                 GlassPanel {
                     VStack(spacing: 12) {
-                        NavigationLink { GeminiSettingsView() } label: {
-                            SettingRow(symbol: "key", title: store.t("Ключ и модель", "Key and model")) { Image(systemName: "chevron.right").foregroundStyle(.secondary) }
-                        }.buttonStyle(.plain)
+                        NavigationLink { AISettingsView() } label: {
+                            SettingRow(symbol: "key", title: store.t("Сервис, ключ и модель", "Service, key and model")) { Image(systemName: "chevron.right").foregroundStyle(.secondary) }
+                        }.buttonStyle(.plain).accessibilityIdentifier("ai-settings")
                         Divider()
                         Toggle(isOn: store.setting(\.checkAnswers)) { Label(store.t("Проверять ответы", "Check answers"), systemImage: "checkmark.bubble") }
                     }
                 }
-                Text(store.t("Ключ хранится в Связке ключей и не входит в резервную копию. Gemini получает только то, что вы отправляете помощнику или на проверку.", "The key is kept in Keychain and excluded from backups. Gemini receives only content you send to the assistant or for checking.")).font(.footnote).foregroundStyle(.secondary)
+                Text(store.t("Ключ хранится в Связке ключей и не входит в резервную копию. Выбранный сервис получает только то, что вы отправляете помощнику или на проверку.", "The key is kept in Keychain and excluded from backups. Your selected service receives only content you send to the assistant or for checking.")).font(.footnote).foregroundStyle(.secondary)
                 SectionTitle(title: store.t("Повторение", "Study"))
                 GlassPanel {
                     NavigationLink { ScheduleView() } label: {
@@ -94,9 +94,9 @@ struct SettingsView: View {
                         } label: { SettingRow(symbol: "tablecells", title: store.t("Экспорт карточек CSV", "Export cards as CSV")) { Image(systemName: "square.and.arrow.up") } }.buttonStyle(.plain)
                     }
                 }
-                Text("Mnemo 1.0 · iOS 26+").font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity)
+                Text("Mnemo 1.1 · iOS 26+").accessibilityIdentifier("settings-footer").font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity)
             }.padding(20)
-        }.sheet(isPresented: $themePicker) { CardThemePicker(selected: store.setting(\.defaultCardThemeID)) }
+        }.mainMenuClearance().sheet(isPresented: $themePicker) { CardThemePicker(selected: store.setting(\.defaultCardThemeID)) }
             .sheet(item: $exported) { ShareSheet(items: [$0.url]) }
     }
     private func setFaceID(_ enabled: Bool) {
@@ -110,45 +110,85 @@ struct SettingsView: View {
     }
 }
 
-struct GeminiSettingsView: View {
+struct AISettingsView: View {
     @Environment(AppStore.self) private var store
     @Environment(GeminiAgent.self) private var agent
     @State private var key = ""
     @State private var hasKey = false
     @State private var loading = false
+    @State private var endpoint = ""
+    @State private var modelID = ""
+    private var provider: AIProvider { store.settings.aiProvider }
+    private var configuredEndpoint: Bool { provider != .custom || !store.settings.aiBaseURL.isEmpty && endpoint == store.settings.aiBaseURL }
+    private var providerSelection: Binding<AIProvider> {
+        Binding(get: { provider }, set: { value in
+            store.perform { try store.commit { $0.settings.selectProvider(value) }; agent.configurationChanged(); resetFields() }
+        })
+    }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                Text("Gemini").font(.largeTitle.bold())
+                Text(store.t("Помощник ИИ", "AI assistant")).font(.largeTitle.bold())
+                GlassPanel {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Picker(store.t("Сервис", "Service"), selection: providerSelection) {
+                            ForEach(AIProvider.allCases) { value in Text(value.title(store.lang)).tag(value) }
+                        }.accessibilityIdentifier("ai-provider").disabled(loading || agent.busy)
+                        Text(store.t("У каждого сервиса свой ключ и список моделей. Например, можно выбрать DeepSeek вместо Gemini.", "Each service has its own key and model list. For example, choose DeepSeek instead of Gemini.")).font(.footnote).foregroundStyle(.secondary)
+                    }
+                }
+                if provider == .custom { customEndpoint }
                 GlassPanel {
                     VStack(alignment: .leading, spacing: 18) {
                         Label(hasKey ? store.t("Ключ сохранён", "Key is saved") : store.t("Добавьте API-ключ", "Add an API key"), systemImage: hasKey ? "lock.shield" : "key").font(.headline)
-                        SecureField(store.t("Новый API-ключ", "New API key"), text: $key).textContentType(.password).textInputAutocapitalization(.never).autocorrectionDisabled()
+                        SecureField(store.t("API-ключ выбранного сервиса", "Selected service API key"), text: $key).textContentType(.password).textInputAutocapitalization(.never).autocorrectionDisabled().accessibilityIdentifier("ai-key")
                         Button(store.t("Сохранить и проверить", "Save and check")) {
-                            store.perform { try Keychain.save(key); key = ""; hasKey = true; reload() }
-                        }.buttonStyle(.glassProminent).disabled(key.isEmpty || loading)
+                            store.perform { try Keychain.save(key, settings: store.settings); key = ""; hasKey = true; reload() }
+                        }.buttonStyle(.glassProminent).disabled(key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || loading || agent.busy || !configuredEndpoint)
                     }
                 }
-                Text(store.t("Ключ отправляется напрямую Google. Не вставляйте ключ в карточки и сообщения. Если для Google нужен VPN, включите его перед проверкой.", "Your key goes directly to Google. Do not paste it into cards or messages. Enable your VPN before checking if Google requires it in your region.")).font(.footnote).foregroundStyle(.secondary)
+                Text(store.t("Ключ хранится в Связке ключей iPhone. Запросы и вложения отправляются выбранному сервису по адресу ниже. Доступность и оплата API зависят от сервиса и вашего аккаунта.", "Your key stays in iPhone Keychain. Prompts and attachments go to the selected service at the address below. API access and charges depend on the service and your account.")).font(.footnote).foregroundStyle(.secondary)
+                Text(store.settings.aiBaseURL.isEmpty ? store.t("Сначала сохраните адрес API", "Save an API URL first") : store.settings.aiBaseURL).font(.caption).textSelection(.enabled)
                 GlassPanel {
                     VStack(alignment: .leading, spacing: 16) {
                         Text(store.t("Модель", "Model")).font(.headline)
                         if loading { ProgressView() }
                         if !agent.models.isEmpty {
-                            Picker(store.t("Модель Gemini", "Gemini model"), selection: store.setting(\.model)) {
+                            Picker(store.t("Доступные модели", "Available models"), selection: store.aiModelBinding) {
+                                if !agent.models.contains(where: { $0.id == store.settings.aiModel }) { Text(store.settings.aiModel).tag(store.settings.aiModel) }
                                 ForEach(agent.models) { model in Text(model.displayName ?? model.id).tag(model.id) }
-                            }
-                        } else { Text(store.settings.model.isEmpty ? store.t("Проверьте ключ, чтобы получить доступные модели", "Check your key to load available models") : store.settings.model).font(.subheadline).foregroundStyle(.secondary) }
-                        Button(store.t("Обновить список моделей", "Refresh model list")) { reload() }.buttonStyle(.glass).disabled(!hasKey || loading)
-                        Text(store.t("Доступность и стоимость зависят от вашего аккаунта Google. При смене модели помощник начинает новый разговор.", "Availability and pricing depend on your Google account. Switching models starts a new assistant conversation.")).font(.footnote).foregroundStyle(.secondary)
+                            }.onChange(of: store.settings.aiModel) { _, value in modelID = value; agent.clearConversation() }
+                        }
+                        TextField(store.t("ID модели", "Model ID"), text: $modelID).textInputAutocapitalization(.never).autocorrectionDisabled().accessibilityIdentifier("ai-model-id")
+                        Button(store.t("Использовать эту модель", "Use this model")) {
+                            store.perform { try store.commit { $0.settings.selectModel(modelID) }; modelID = store.settings.aiModel; agent.clearConversation() }
+                        }.buttonStyle(.glass).disabled(modelID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || loading || agent.busy || !configuredEndpoint)
+                        Button(store.t("Обновить список моделей", "Refresh model list")) { reload() }.buttonStyle(.glass).disabled(!hasKey || loading || agent.busy || !configuredEndpoint)
+                        Text(store.t("Выбирайте модель с поддержкой команд (tools / function calling). Для фото нужна поддержка изображений. Если списка нет, укажите ID из документации сервиса.", "Choose a model supporting tools / function calling. Photos need image support. If no catalog is available, enter the model ID from the service documentation.")).font(.footnote).foregroundStyle(.secondary)
                     }
                 }
                 if let error = agent.error { Text(error).font(.footnote).foregroundStyle(.red) }
             }.padding(20)
-        }.background { AmbientBackground() }.navigationBarTitleDisplayMode(.inline).onAppear { hasKey = (try? Keychain.read().isEmpty == false) ?? false }
+        }.mainMenuClearance().background { AmbientBackground() }.navigationBarTitleDisplayMode(.inline).onAppear { resetFields() }
+    }
+    private var customEndpoint: some View {
+        GlassPanel {
+            VStack(alignment: .leading, spacing: 16) {
+                Text(store.t("Адрес совместимого API", "Compatible API URL")).font(.headline)
+                TextField("https://example.com/v1", text: $endpoint).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled().accessibilityIdentifier("ai-endpoint")
+                Button(store.t("Сохранить адрес", "Save URL")) {
+                    store.perform { try store.commit { try $0.settings.setCustomBaseURL(endpoint) }; agent.configurationChanged(); resetFields() }
+                }.buttonStyle(.glass).disabled(loading || agent.busy)
+                Text(store.t("Нужен API формата OpenAI Chat Completions с командами. Укажите базовый адрес без /chat/completions. Ключ привязан к этому адресу; для другого адреса вводится отдельно.", "Requires an OpenAI Chat Completions compatible API with tools. Enter its base URL without /chat/completions. Keys are scoped to this URL; enter a separate key for a different URL.")).font(.footnote).foregroundStyle(.secondary)
+            }
+        }
+    }
+    private func resetFields() {
+        key = ""; endpoint = store.settings.ai?.customBaseURL ?? ""; modelID = store.settings.aiModel
+        hasKey = (try? Keychain.read(settings: store.settings).isEmpty == false) ?? false
     }
     private func reload() {
         loading = true; agent.clearConversation(); agent.error = nil
-        Task { await agent.loadModels(store: store); loading = false }
+        Task { await agent.loadModels(store: store); modelID = store.settings.aiModel; loading = false }
     }
 }

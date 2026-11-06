@@ -24,18 +24,19 @@ import MnemoCore
                 VStack(spacing: 12) {
                     HStack {
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("Gemini").font(.system(.largeTitle, design: .rounded, weight: .bold))
+                            Text(store.settings.aiProvider.title(store.lang)).font(.system(.largeTitle, design: .rounded, weight: .bold))
                             Text(store.t("Помощник по карточкам", "Your card assistant")).font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer()
                         Menu {
                             ForEach(agent.models) { model in
-                                Button(model.displayName ?? model.id) { store.perform { try store.commit { $0.settings.model = model.id }; agent.clearConversation() } }
+                                Button(model.displayName ?? model.id) { store.perform { try store.commit { $0.settings.selectModel(model.id) }; agent.clearConversation() } }
                             }
                             Button(store.t("Обновить модели", "Refresh models")) { Task { await agent.loadModels(store: store) } }
                             Button(store.t("Новый разговор", "New conversation")) { agent.clearConversation() }
+                            NavigationLink(store.t("Сервис, ключ и модель", "Service, key and model")) { AISettingsView() }
                         } label: { Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44) }.buttonStyle(.glass).disabled(agent.busy)
-                        IconButton(symbol: "xmark", label: store.t("Закрыть Gemini", "Close Gemini")) { dismiss() }
+                        IconButton(symbol: "xmark", label: store.t("Закрыть помощника", "Close assistant")) { dismiss() }
                     }.padding(.horizontal, 20).padding(.top, 12)
                     ScrollViewReader { reader in
                         ScrollView {
@@ -46,7 +47,7 @@ import MnemoCore
                                         if message.user { Spacer(minLength: 24) }
                                         GlassPanel(padding: 16) {
                                             VStack(alignment: .leading, spacing: 10) {
-                                                if !message.user { Label("Gemini", systemImage: "sparkles").font(.caption.weight(.semibold)).foregroundStyle(Color(hex: store.theme.accent)) }
+                                                if !message.user { Label(store.settings.aiProvider.title(store.lang), systemImage: "sparkles").font(.caption.weight(.semibold)).foregroundStyle(Color(hex: store.theme.accent)) }
                                                 if !message.text.isEmpty { Text(.init(message.text)).font(.body).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
                                                 ForEach(message.attachmentNames, id: \.self) { name in Label(name, systemImage: "paperclip").font(.footnote).foregroundStyle(.secondary) }
                                             }
@@ -101,8 +102,8 @@ import MnemoCore
                 PhotosPicker(selection: $photo, matching: .images) { Text(store.t("Из фото", "From photo")) }.buttonStyle(.glass)
                 Button("PDF") { importFile = true }.buttonStyle(.glass)
             }
-            Text(store.t("Перед отправкой включите VPN, если он нужен для Google. Содержимое выбранных вложений получит Google.", "Enable your VPN if Google needs it in your region. Selected attachment contents will be sent to Google.")).font(.footnote).foregroundStyle(.secondary)
-            if store.settings.model.isEmpty {
+            Text(store.t("Запрос и вложения получит выбранный сервис ИИ. Фото поддерживаются не всеми моделями. Из PDF для сервисов кроме Gemini извлекается текст; для сканов прикрепите фото страниц.", "Your selected AI service receives your prompt and attachments. Image support depends on the model. For services other than Gemini, PDF text is extracted; attach photos of scanned pages.")).font(.footnote).foregroundStyle(.secondary)
+            if store.settings.aiModel.isEmpty {
                 Button(store.t("Настроить ключ и модель", "Set up key and model")) { dismiss(); store.selectedTab = 3 }.buttonStyle(.glassProminent)
             }
         }
@@ -135,7 +136,7 @@ import MnemoCore
                     else {
                         voice.stopDictation(); agent.send(input, attachments: attachments, store: store); input = ""; attachments = []
                     }
-                } label: { Image(systemName: agent.busy ? "stop.fill" : "arrow.up").font(.headline).frame(width: 40, height: 40).background(Color(hex: store.theme.accent), in: Circle()).foregroundStyle(Color(hex: store.theme.buttonText)) }.disabled(!agent.busy && !canSend).accessibilityLabel(agent.busy ? store.t("Остановить", "Stop") : store.t("Отправить Gemini", "Send to Gemini"))
+                } label: { Image(systemName: agent.busy ? "stop.fill" : "arrow.up").font(.headline).frame(width: 40, height: 40).background(Color(hex: store.theme.accent), in: Circle()).foregroundStyle(Color(hex: store.theme.buttonText)) }.disabled(!agent.busy && !canSend).accessibilityLabel(agent.busy ? store.t("Остановить", "Stop") : store.t("Отправить помощнику", "Send to assistant"))
             }.padding(8).glassEffect(.regular, in: .rect(cornerRadius: 30))
         }
     }

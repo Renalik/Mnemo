@@ -6,7 +6,7 @@ struct GeminiModel: Codable, Identifiable, Sendable {
     let name: String
     let displayName: String?
     let supportedGenerationMethods: [String]?
-    var id: String { name.replacingOccurrences(of: "models/", with: "") }
+    var id: String { name.hasPrefix("models/") ? String(name.dropFirst(7)) : name }
 }
 
 struct ChatMessage: Identifiable {
@@ -111,26 +111,40 @@ actor GeminiHTTP {
     var toolStatus = ""
     private var contents: [JSONValue] = []
     private var activeModel = ""
-    private let http = GeminiHTTP()
+    private let http = AIHTTP()
+    private var activeConfiguration = ""
     private var running: Task<Void, Never>?
     private var generation = UUID()
 
     func loadModels(store: AppStore) async {
+        let settings = store.settings
         do {
-            let result = try await http.models(key: Keychain.read())
+            let result = try await http.models(settings: settings, key: Keychain.read(settings: settings))
+            guard store.settings.aiProvider == settings.aiProvider, store.settings.aiBaseURL == settings.aiBaseURL else { return }
             models = result
-            if !result.contains(where: { $0.id == store.settings.model }), let recommended = result.first(where: { $0.id.contains("flash") && !$0.id.contains("preview") }) ?? result.first {
-                try store.commit { $0.settings.model = recommended.id }
+            if store.settings.aiModel.isEmpty, let recommended = result.first(where: { settings.aiProvider == .gemini && $0.id.contains("flash") && !$0.id.contains("preview") }) ?? result.first {
+                try store.commit { $0.settings.selectModel(recommended.id) }
             }
-        } catch { self.error = error.localizedDescription }
+        } catch {
+            if store.settings.aiProvider == settings.aiProvider, store.settings.aiBaseURL == settings.aiBaseURL { self.error = error.localizedDescription }
+        }
     }
     func stop() { generation = UUID(); running?.cancel(); running = nil; busy = false; toolStatus = "" }
     func clearConversation() { stop(); contents = []; messages = []; pending = [] }
+    func configurationChanged() { clearConversation(); models = []; error = nil; activeConfiguration = "" }
     func send(_ text: String, attachments: [AgentAttachment] = [], store: AppStore) {
         guard !busy, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !attachments.isEmpty else { return }
         guard attachments.reduce(text.utf8.count, { $0 + $1.data.count }) <= 12_000_000 else { error = store.t("Вложения вместе должны быть меньше 12 МБ", "Total attachments must be under 12 MB"); return }
         guard pending.isEmpty else { error = store.t("Сначала примените или отклоните предложенные изменения", "Apply or dismiss the proposed changes first"); return }
-        if activeModel != store.settings.model { contents = []; activeModel = store.settings.model }
+        let settings = store.settings
+        let configuration = settings.aiProvider.rawValue + "|" + settings.aiBaseURL + "|" + settings.aiModel
+        let attachmentParts: [JSONValue]
+        do {
+            guard !settings.aiModel.isEmpty else { throw MnemoError.invalid(store.t("Выберите модель ИИ в настройках", "Choose an AI model in Settings")) }
+            attachmentParts = try attachments.map { try $0.part(for: settings.aiProvider) }
+            _ = try Keychain.read(settings: settings)
+        } catch { self.error = error.localizedDescription; return }
+        if activeConfiguration != configuration { clearConversation(); activeConfiguration = configuration; activeModel = settings.aiModel }
         messages.append(ChatMessage(user: true, text: text, attachmentNames: attachments.map(\.name)))
         busy = true; error = nil
         let requestID = UUID(); generation = requestID
@@ -138,9 +152,9 @@ actor GeminiHTTP {
             guard let self else { return }
             defer { if self.generation == requestID { self.busy = false; self.toolStatus = ""; self.running = nil } }
             do {
-                let key = try Keychain.read()
+                let key = try Keychain.read(settings: settings)
                 var parts: [JSONValue] = [.object(["text": .string(text)])]
-                parts += attachments.map(\.part)
+                parts += attachmentParts
                 // Send a bounded conversation: dropping the oldest complete turns
                 // never separates a model tool call from its function responses.
                 var conversation = self.contents
@@ -151,7 +165,7 @@ actor GeminiHTTP {
                 var finished = false
                 for _ in 0..<8 {
                     try Task.checkCancellation()
-                    let content = try await self.http.generate(model: self.activeModel, key: key, system: Self.system(language: store.lang), contents: conversation, tools: Self.tools)
+                    let content = try await self.http.generate(settings: settings, key: key, system: Self.system(language: store.lang), contents: conversation, tools: Self.tools)
                     try Task.checkCancellation()
                     guard self.generation == requestID else { return }
                     conversation.append(content)

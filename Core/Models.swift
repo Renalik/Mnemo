@@ -48,9 +48,18 @@ public struct Settings: Codable, Equatable, Sendable {
     public var liveActivity = true
     public var checkAnswers = false
     public var model = ""
+    // Optional so libraries and backups made before multiple providers still decode.
+    public var ai: AISettings? = nil
     public var onboardingComplete = false
     public init() {}
     public func validate() throws {
+        if let ai {
+            guard ai.models.count <= AIProvider.allCases.count,
+                  ai.models.allSatisfy({ AIProvider(rawValue: $0.key) != nil && $0.value.count < 240 && !$0.value.contains(where: { $0.isWhitespace || $0.isNewline }) }) else {
+                throw MnemoError.invalid("Неверные настройки модели ИИ / Invalid AI model settings")
+            }
+            if !ai.customBaseURL.isEmpty { _ = try AIEndpoint.normalized(ai.customBaseURL) }
+        }
         guard (0...200).contains(newPerDay), (1...2000).contains(reviewsPerDay),
               retention.isFinite, (0.7...0.97).contains(retention),
               !weekdays.isEmpty, Set(weekdays).count == weekdays.count,
@@ -144,6 +153,13 @@ public struct Library: Codable, Equatable, Sendable {
     public var events: [AnswerEvent] = []
     public var visits: [Date] = []
     public init() {}
+    public mutating func deleteDeck(_ id: UUID) throws {
+        guard decks.contains(where: { $0.id == id }) else { throw MnemoError.invalid("Колода не найдена / Deck not found") }
+        let cardIDs = Set(cards.filter { $0.deckID == id }.map(\.id))
+        decks.removeAll { $0.id == id }
+        cards.removeAll { $0.deckID == id }
+        events.removeAll { $0.deckID == id || cardIDs.contains($0.cardID) }
+    }
     public func validate() throws {
         try settings.validate()
         let deckIDs = Set(decks.map(\.id))
