@@ -24,7 +24,7 @@ enum Keychain {
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound { return "" }
         guard status == errSecSuccess, let data = result as? Data, let key = String(data: data, encoding: .utf8) else {
-            throw MnemoError.invalid("Не удалось прочитать ключ / Could not read the API key")
+            throw MnemoError.invalid("Не удалось прочитать ключ (\(status)) / Could not read the API key")
         }
         return key
     }
@@ -36,8 +36,9 @@ enum Keychain {
         let status = SecItemUpdate(query as CFDictionary, attrs as CFDictionary)
         if status == errSecItemNotFound {
             var entry = query; attrs.forEach { entry[$0.key] = $0.value }
-            guard SecItemAdd(entry as CFDictionary, nil) == errSecSuccess else { throw MnemoError.invalid("Не удалось сохранить ключ / Could not save the API key") }
-        } else if status != errSecSuccess { throw MnemoError.invalid("Не удалось обновить ключ / Could not update the API key") }
+            let added = SecItemAdd(entry as CFDictionary, nil)
+            guard added == errSecSuccess else { throw MnemoError.invalid("Не удалось сохранить ключ (\(added)) / Could not save the API key") }
+        } else if status != errSecSuccess { throw MnemoError.invalid("Не удалось обновить ключ (\(status)) / Could not update the API key") }
     }
 }
 

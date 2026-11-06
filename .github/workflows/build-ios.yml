@@ -69,12 +69,15 @@ jobs:
         if: matrix.variant == 'free'
         run: |
           DEVICE=$(python3 tools/select_simulator.py)
-          xcodebuild -project Mnemo.xcodeproj -scheme Mnemo -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath build/simulator -resultBundlePath build/UITests.xcresult CODE_SIGNING_ALLOWED=NO test
+          xcodebuild -project Mnemo.xcodeproj -scheme Mnemo -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath build/simulator -resultBundlePath build/IntegrationTests.xcresult -only-testing:MnemoIntegrationTests test
+          xcodebuild -project Mnemo.xcodeproj -scheme Mnemo -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath build/simulator -resultBundlePath build/UITests.xcresult -only-testing:MnemoUITests test
       - uses: actions/upload-artifact@v4
         if: always() && matrix.variant == 'free'
         with:
           name: Mnemo-UI-test-results
-          path: build/UITests.xcresult
+          path: |
+            build/UITests.xcresult
+            build/IntegrationTests.xcresult
           retention-days: 14
       - name: Export simulator screenshots
         if: always() && matrix.variant == 'free'
